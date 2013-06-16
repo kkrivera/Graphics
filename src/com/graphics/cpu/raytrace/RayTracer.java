@@ -1,6 +1,7 @@
 package com.graphics.cpu.raytrace;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -8,7 +9,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.graphics.cpu.ThreadManager;
+import com.graphics.cpu.ThreadManager.ThreadedAction;
 import com.graphics.cpu.raytrace.acceleration.IntersectionAlgorithm;
+import com.graphics.cpu.raytrace.lighting.LightingAlgorithm;
 import com.graphics.cpu.raytrace.properties.PropertyLoader;
 import com.graphics.geom.impl.Point2d;
 import com.graphics.geom.impl.Point3d;
@@ -24,6 +28,7 @@ import com.graphics.window.Window;
 public class RayTracer {
 
 	public static void init() {
+
 		final PropertyLoader properties = new PropertyLoader();
 
 		/*
@@ -101,24 +106,60 @@ public class RayTracer {
 		}
 	}
 
-	private static Map<Ray, Set<Point2d>> buildRayMap(double resolution, int windowWidth, int windowHeight, Vector3d eye, Vector3d u00, Vector3d u00Vertical,
-			Vector3d u00Horizontal) {
+	private static Map<Ray, Set<Point2d>> buildRayMap(double resolution, final int windowWidth, final int windowHeight, final Vector3d eye, final Vector3d u00,
+			final Vector3d u00Vertical, final Vector3d u00Horizontal) {
 
-		Map<Ray, Set<Point2d>> pixelRayMap = new HashMap<Ray, Set<Point2d>>();
-		int resolutionStep = (int) (1.0 / resolution);
+		ThreadManager tm = new ThreadManager();
+
+		Set<Integer> indices = new HashSet<Integer>();
+		final int resolutionStep = (int) (1.0 / resolution);
 		for (int i = 0; i < windowWidth; i += resolutionStep) {
 			for (int j = 0; j < windowHeight; j += resolutionStep) {
-
-				Set<Point2d> pixels = new HashSet<Point2d>();
-				for (int xRes = 0; xRes < resolutionStep; xRes++) {
-					for (int yRes = 0; yRes < resolutionStep; yRes++) {
-						pixels.add(new Point2d(windowWidth - 1 - (i + xRes), windowHeight - 1 - (j + yRes)));
-					}
-				}
-
-				pixelRayMap.put(new Ray(eye, u00.plus(u00Vertical.times(j)).plus(u00Horizontal.times(i)).normalize()), pixels);
+				indices.add(i * windowHeight + j);
 			}
 		}
+		Set<Map<Ray, Set<Point2d>>> results = tm.executeForResult(indices, new ThreadedAction<Integer, Map<Ray, Set<Point2d>>>() {
+			@Override
+			public Map<Ray, Set<Point2d>> execute(Collection<Integer> input) {
+				Map<Ray, Set<Point2d>> pixelRayMap = new HashMap<Ray, Set<Point2d>>();
+
+				for (Integer index : input) {
+
+					int j = index % windowHeight;
+					int i = (index - j) / windowHeight;
+
+					Set<Point2d> pixels = new HashSet<Point2d>();
+					for (int xRes = 0; xRes < resolutionStep; xRes++) {
+						for (int yRes = 0; yRes < resolutionStep; yRes++) {
+							pixels.add(new Point2d(windowWidth - 1 - (i + xRes), windowHeight - 1 - (j + yRes)));
+						}
+					}
+
+					pixelRayMap.put(new Ray(eye, u00.plus(u00Vertical.times(j)).plus(u00Horizontal.times(i)).normalize()), pixels);
+				}
+
+				return pixelRayMap;
+			}
+		});
+
+		Map<Ray, Set<Point2d>> pixelRayMap = new HashMap<Ray, Set<Point2d>>();
+		for (Map<Ray, Set<Point2d>> subResultSet : results) {
+			pixelRayMap.putAll(subResultSet);
+		}
+
+		// for (int i = 0; i < windowWidth; i += resolutionStep) {
+		// for (int j = 0; j < windowHeight; j += resolutionStep) {
+		//
+		// Set<Point2d> pixels = new HashSet<Point2d>();
+		// for (int xRes = 0; xRes < resolutionStep; xRes++) {
+		// for (int yRes = 0; yRes < resolutionStep; yRes++) {
+		// pixels.add(new Point2d(windowWidth - 1 - (i + xRes), windowHeight - 1 - (j + yRes)));
+		// }
+		// }
+		//
+		// pixelRayMap.put(new Ray(eye, u00.plus(u00Vertical.times(j)).plus(u00Horizontal.times(i)).normalize()), pixels);
+		// }
+		// }
 
 		return pixelRayMap;
 	}
@@ -128,18 +169,23 @@ public class RayTracer {
 		Window window = new Window();
 
 		/*
-		 * Load Intersection Algorithm
+		 * Load Intersection and Lighting Algorithm
 		 */
-		IntersectionAlgorithm algorithm;
+		IntersectionAlgorithm intersection;
+		LightingAlgorithm lighting;
 		try {
-			algorithm = IntersectionAlgorithm.class.cast(Class.forName(propertyLoader.getProperty("acceleration.algorithm.class")).newInstance());
+			intersection = IntersectionAlgorithm.class.cast(Class.forName(propertyLoader.getProperty("acceleration.algorithm.class")).newInstance());
+			lighting = LightingAlgorithm.class.cast(Class.forName(propertyLoader.getProperty("lighting.algorithm.class")).newInstance());
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 
+		//
+		lighting.init(pixelRayMap.keySet(), models.toArray(new Model[] {}));
+
 		for (Model model : models) {
 
-			Map<Ray, Map<ModelTriangle, Double>> intersectedRays = algorithm.intersect(model, pixelRayMap.keySet());
+			Map<Ray, Map<ModelTriangle, Double>> intersectedRays = intersection.intersect(model, pixelRayMap.keySet());
 			for (Ray ray : intersectedRays.keySet()) {
 
 				/*
@@ -160,21 +206,9 @@ public class RayTracer {
 				 * Render Triangle point
 				 */
 				if (triangle != null) {
-					Point3d intersection = ray.getPoint(t);
-
+					int pixelColor = lighting.render(ray, t, triangle, model.mtl);
 					for (Point2d pixel : pixelRayMap.get(ray)) {
-						// int color = (triangle.colors[0] + triangle.colors[1] + triangle.colors[2]) / 3;
-						int color = triangle.colors[0];
-
-						// TODO - barycentric value
-						Vector3d rgbColor = new Vector3d(color >> 16 & 0xFF, color >> 8 & 0xFF, color >> 0 & 0xFF);
-
-						Vector3d rgbDiffuse = model.mtl.Kd.times(rgbColor);
-						Vector3d rgbSpecular = model.mtl.Ks.times(model.mtl.Ns);
-						Vector3d rgbAmbient = model.mtl.Ka;
-						Vector3d rgb = rgbDiffuse;// .plus(rgbSpecular).plus(rgbAmbient);
-
-						window.setColor((int) pixel.x, (int) pixel.y, Window.getColor((int) rgb.x, (int) rgb.y, (int) rgb.z));
+						window.setColor((int) pixel.x, (int) pixel.y, pixelColor);
 					}
 				}
 			}

@@ -196,7 +196,7 @@ public class WavefrontModelLoader implements ModelLoader {
 						for (int i = 0; i < polygonSize; i++) {
 							Vector2d textureCoordinate = textureArr[i];
 							try {
-								colors[i] = mapKd.getRGB((int) (w * textureCoordinate.x), (int) (h * (1.0 - textureCoordinate.y)));
+								colors[i] = mapKd.getRGB((int) (w * (textureCoordinate.x)), (int) (h * (1.0 - textureCoordinate.y)));
 							} catch (Exception e) {
 								throw new RuntimeException(e);
 							}
