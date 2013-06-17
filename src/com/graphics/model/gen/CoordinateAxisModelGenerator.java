@@ -15,7 +15,7 @@ public class CoordinateAxisModelGenerator extends BaseModelGenerator {
 		double center = cameraDistance / 20.0;
 		double thickness = center / 25.0;
 
-		Material mtl = new Material(new double[] { 1, 1, 1 }, new double[] { 1, 1, 1 }, new double[] { .2, .2, .2 }, 1, 0);
+		Material mtl = new Material(new double[] { .01, .01, .01 }, new double[] { 1, 1, 1 }, new double[] { .2, .2, .2 }, 1, 0);
 
 		xAxisModelGenerator = new BoxModelGenerator(new Point3d(center, 0, 0), thickness, center * 2, thickness);
 		xAxisModelGenerator.configure(Window.getColor(255, 0, 0), mtl);

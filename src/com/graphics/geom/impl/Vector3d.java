@@ -21,6 +21,11 @@ public class Vector3d extends Point3d {
 		return new Vector3d(this.x + x, this.y + y, this.z + z);
 	}
 
+	public Vector3d plusEquals(Vector3d v) {
+		this.translate(v.x, v.y, v.z);
+		return this;
+	}
+
 	public Vector3d minus(Vector3d v) {
 		return new Vector3d(this.x - v.x, this.y - v.y, this.z - v.z);
 	}
@@ -57,8 +62,7 @@ public class Vector3d extends Point3d {
 		return Math.sqrt(Math.pow(x, 2.0) + Math.pow(y, 2.0) + Math.pow(z, 2.0));
 	}
 
-	@Override
-	public Object clone() throws CloneNotSupportedException {
+	public Vector3d clone() {
 		return new Vector3d(x, y, z);
 	}
 

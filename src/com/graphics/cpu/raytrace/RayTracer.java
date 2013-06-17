@@ -12,6 +12,7 @@ import java.util.Set;
 import com.graphics.cpu.ThreadManager;
 import com.graphics.cpu.ThreadManager.ThreadedAction;
 import com.graphics.cpu.raytrace.acceleration.IntersectionAlgorithm;
+import com.graphics.cpu.raytrace.acceleration.IntersectionBundle;
 import com.graphics.cpu.raytrace.lighting.LightingAlgorithm;
 import com.graphics.cpu.raytrace.properties.PropertyLoader;
 import com.graphics.geom.impl.Point2d;
@@ -19,6 +20,7 @@ import com.graphics.geom.impl.Point3d;
 import com.graphics.geom.impl.Vector3d;
 import com.graphics.model.Material;
 import com.graphics.model.Model;
+import com.graphics.model.Scene;
 import com.graphics.model.gen.BoxModelGenerator;
 import com.graphics.model.gen.CoordinateAxisModelGenerator;
 import com.graphics.model.geom.ModelTriangle;
@@ -36,9 +38,10 @@ public class RayTracer {
 		 */
 		List<Model> loadedModels = new ArrayList<Model>();
 
-		BoxModelGenerator boxModel = new BoxModelGenerator(new Point3d(0, 0, 2), .5, .5, .5);
-		boxModel.configure(Window.getColor(125, 255, 255), new Material(new double[] { 1, 1, 1 }, new double[] { 1, 1, 1 }, new double[] { .1, .1, .1 }, 1, 0));
-		// loadedModels.add(boxModel.generate());
+		BoxModelGenerator boxModel = new BoxModelGenerator(new Point3d(1, .5, 2), 1, 1, 1);
+		boxModel.configure(Window.getColor(125, 255, 255), new Material(new double[] { .01, .01, .01 }, new double[] { 1, 1, 1 }, new double[] { .1, .1, .1 },
+				1, 0));
+		loadedModels.add(boxModel.generate());
 
 		// Begin Model load in separate thread
 		try {
@@ -166,44 +169,47 @@ public class RayTracer {
 
 		ThreadManager threadManager = new ThreadManager();
 
-		for (final Model model : models) {
+		// Create a scene from all of the triangles in the scene
+		Scene scene = new Scene("Render Scene", models.toArray(new Model[] {}));
 
-			final Map<Ray, Map<ModelTriangle, Double>> intersectedRays = intersection.intersect(model, pixelRayMap.keySet());
+		// Intersects all rays with the scene
+		final Map<Ray, Map<ModelTriangle, IntersectionBundle>> intersectedRays = intersection.intersect(scene, pixelRayMap.keySet());
 
-			threadManager.executeForResult(new HashSet<Ray>(intersectedRays.keySet()), new ThreadManager.ThreadedAction<Ray, Integer>() {
-				@Override
-				public Integer execute(Collection<Ray> input) {
+		threadManager.executeForResult(new HashSet<Ray>(intersectedRays.keySet()), new ThreadManager.ThreadedAction<Ray, Integer>() {
+			@Override
+			public Integer execute(Collection<Ray> input) {
 
-					for (Ray ray : input) {
+				for (Ray ray : input) {
 
-						/*
-						 * Get closest triangle
-						 */
-						double t = Double.MAX_VALUE;
-						ModelTriangle triangle = null;
-						for (Entry<ModelTriangle, Double> entry : intersectedRays.get(ray).entrySet()) {
+					/*
+					 * Get closest triangle
+					 */
+					double t = Double.MAX_VALUE;
+					ModelTriangle triangle = null;
+					for (Entry<ModelTriangle, IntersectionBundle> entry : intersectedRays.get(ray).entrySet()) {
 
-							if (triangle == null || entry.getValue() < t) {
-								t = entry.getValue();
-								triangle = entry.getKey();
-							}
-						}
-
-						/*
-						 * Render Triangle point
-						 */
-						if (triangle != null) {
-							int pixelColor = lighting.render(ray, t, triangle, model.mtl);
-							for (Point2d pixel : pixelRayMap.get(ray)) {
-								window.setColor((int) pixel.x, (int) pixel.y, pixelColor);
-							}
+						if (triangle == null || entry.getValue().t < t) {
+							t = entry.getValue().t;
+							triangle = entry.getKey();
 						}
 					}
-					return null;
-				}
-			});
 
-		}
+					/*
+					 * Render Triangle point
+					 */
+					if (triangle != null) {
+						IntersectionBundle intersection = intersectedRays.get(ray).get(triangle);
+						int pixelColor = lighting.render(ray, intersection, triangle);
+
+						for (Point2d pixel : pixelRayMap.get(ray)) {
+							window.setColor((int) pixel.x, (int) pixel.y, pixelColor);
+						}
+					}
+				}
+				return null;
+			}
+		});
+
 		window.update(null);
 	}
 }

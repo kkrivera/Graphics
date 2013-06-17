@@ -16,7 +16,7 @@ import com.graphics.model.geom.ModelTriangle;
 public class AABB implements IntersectionAlgorithm {
 
 	@Override
-	public Map<Ray, Map<ModelTriangle, Double>> intersect(final Model model, Set<Ray> rays) {
+	public Map<Ray, Map<ModelTriangle, IntersectionBundle>> intersect(final Model model, Set<Ray> rays) {
 		double[] min = new double[] { Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE };
 		double[] max = new double[] { Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE };
 
@@ -36,23 +36,23 @@ public class AABB implements IntersectionAlgorithm {
 		ThreadManager threadManager = new ThreadManager();
 
 		final Box aabb = new Box(new Point3d(max), new Point3d(min));
-		Map<Ray, Map<ModelTriangle, Double>> triangles = new HashMap<Ray, Map<ModelTriangle, Double>>();
-		threadManager.executeForResult(new HashSet<Ray>(rays), new ThreadManager.ThreadedAction<Ray, Map<Ray, Map<ModelTriangle, Double>>>() {
+		Map<Ray, Map<ModelTriangle, IntersectionBundle>> triangles = new HashMap<Ray, Map<ModelTriangle, IntersectionBundle>>();
+		threadManager.executeForResult(new HashSet<Ray>(rays), new ThreadManager.ThreadedAction<Ray, Map<Ray, Map<ModelTriangle, IntersectionBundle>>>() {
 			@Override
-			public Map<Ray, Map<ModelTriangle, Double>> execute(Collection<Ray> input) {
+			public Map<Ray, Map<ModelTriangle, IntersectionBundle>> execute(Collection<Ray> input) {
 
-				Map<Ray, Map<ModelTriangle, Double>> triangles = new HashMap<Ray, Map<ModelTriangle, Double>>();
+				Map<Ray, Map<ModelTriangle, IntersectionBundle>> triangles = new HashMap<Ray, Map<ModelTriangle, IntersectionBundle>>();
 				for (Ray ray : input) {
 
 					if (ray.intersects(aabb)) {
 						for (ModelTriangle triangle : model.triangles) {
 
-							double t = ray.intersects(triangle);
-							if (t > 0) {
+							IntersectionBundle intersection = ray.intersects(triangle);
+							if (intersection != null) {
 								if (!triangles.containsKey(ray)) {
-									triangles.put(ray, new HashMap<ModelTriangle, Double>());
+									triangles.put(ray, new HashMap<ModelTriangle, IntersectionBundle>());
 								}
-								triangles.get(ray).put(triangle, t);
+								triangles.get(ray).put(triangle, intersection);
 							}
 						}
 					}

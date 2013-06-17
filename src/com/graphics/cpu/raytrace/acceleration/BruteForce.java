@@ -14,28 +14,28 @@ import com.graphics.model.geom.ModelTriangle;
 public class BruteForce implements IntersectionAlgorithm {
 
 	@Override
-	public Map<Ray, Map<ModelTriangle, Double>> intersect(final Model model, Set<Ray> rays) {
+	public Map<Ray, Map<ModelTriangle, IntersectionBundle>> intersect(final Model model, Set<Ray> rays) {
 
 		ThreadManager threadManager = new ThreadManager();
 
-		Map<Ray, Map<ModelTriangle, Double>> intersections = new HashMap<Ray, Map<ModelTriangle, Double>>();
-		threadManager.executeForResult(new HashSet<Ray>(rays), new ThreadManager.ThreadedAction<Ray, Map<Ray, Map<ModelTriangle, Double>>>() {
+		Map<Ray, Map<ModelTriangle, IntersectionBundle>> intersections = new HashMap<Ray, Map<ModelTriangle, IntersectionBundle>>();
+		threadManager.executeForResult(new HashSet<Ray>(rays), new ThreadManager.ThreadedAction<Ray, Map<Ray, Map<ModelTriangle, IntersectionBundle>>>() {
 			@Override
-			public Map<Ray, Map<ModelTriangle, Double>> execute(Collection<Ray> input) {
-				Map<Ray, Map<ModelTriangle, Double>> intersections = new HashMap<Ray, Map<ModelTriangle, Double>>();
+			public Map<Ray, Map<ModelTriangle, IntersectionBundle>> execute(Collection<Ray> input) {
+				Map<Ray, Map<ModelTriangle, IntersectionBundle>> intersections = new HashMap<Ray, Map<ModelTriangle, IntersectionBundle>>();
 
 				for (Ray ray : input) {
 					for (ModelTriangle modelTriangle : model.triangles) {
 
-						double t = ray.intersects(modelTriangle);
-						if (t > 0) {
+						IntersectionBundle bundle = ray.intersects(modelTriangle);
+						if (bundle != null) {
 
 							// Add intersected ray
 							if (!intersections.containsKey(ray)) {
-								intersections.put(ray, new HashMap<ModelTriangle, Double>());
+								intersections.put(ray, new HashMap<ModelTriangle, IntersectionBundle>());
 							}
 
-							intersections.get(ray).put(modelTriangle, new Double(t));
+							intersections.get(ray).put(modelTriangle, bundle);
 						}
 					}
 				}

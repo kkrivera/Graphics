@@ -39,6 +39,6 @@ public class Triangle implements Shape, Transform3d {
 
 	@Override
 	public Object clone() throws CloneNotSupportedException {
-		return new Triangle((Point3d) points[0].clone(), (Point3d) points[1].clone(), (Point3d) points[2].clone());
+		return new Triangle(points[0].clone(), points[1].clone(), points[2].clone());
 	}
 }

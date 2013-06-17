@@ -11,8 +11,8 @@ import com.graphics.model.geom.ModelTriangle;
 public class BVH implements IntersectionAlgorithm {
 
 	@Override
-	public Map<Ray, Map<ModelTriangle, Double>> intersect(Model model, Set<Ray> rays) {
-		Map<Ray, Map<ModelTriangle, Double>> triangles = new HashMap<Ray, Map<ModelTriangle, Double>>();
+	public Map<Ray, Map<ModelTriangle, IntersectionBundle>> intersect(Model model, Set<Ray> rays) {
+		Map<Ray, Map<ModelTriangle, IntersectionBundle>> triangles = new HashMap<Ray, Map<ModelTriangle, IntersectionBundle>>();
 
 		return triangles;
 	}

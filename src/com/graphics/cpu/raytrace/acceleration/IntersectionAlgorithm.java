@@ -11,6 +11,8 @@ public interface IntersectionAlgorithm {
 
 	/**
 	 * Returns a map of {@link ModelTriangle} which were intersected with a given {@link Set} of {@link Ray}s
+	 * 
+	 * The Double array contains the following elements {t, alpha, beta} where t is the intersection length on the ray. Alpha and Beta are Barycentric values
 	 */
-	public Map<Ray, Map<ModelTriangle, Double>> intersect(Model model, Set<Ray> rays);
+	public Map<Ray, Map<ModelTriangle, IntersectionBundle>> intersect(Model model, Set<Ray> rays);
 }

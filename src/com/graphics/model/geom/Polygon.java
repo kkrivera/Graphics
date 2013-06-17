@@ -6,18 +6,20 @@ import java.util.List;
 import com.graphics.geom.Transform3d;
 import com.graphics.geom.impl.Point3d;
 import com.graphics.geom.impl.Vector3d;
+import com.graphics.model.Material;
 
 public class Polygon implements Transform3d {
 	public List<ModelTriangle> modelTriangles = new ArrayList<ModelTriangle>();
 
-	public Polygon(Point3d[] vertices, Vector3d[] vertexNormals, int[] colors) {
+	public Polygon(Point3d[] vertices, Vector3d[] vertexNormals, int[] colors, Material mtl) {
 
 		int triangles = vertices.length - 2;
 
 		// At least 3 vertices need to be present
 		for (int i = 0; i < triangles; i++) {
-			modelTriangles.add(new ModelTriangle(new Point3d[] { vertices[0], vertices[i + 1], vertices[i + 2] }, new Vector3d[] { vertexNormals[0],
-					vertexNormals[i + 1], vertexNormals[i + 2] }, new int[] { colors[0], colors[i + 1], colors[i + 2] }));
+			modelTriangles.add(new ModelTriangle(new Point3d[] { vertices[0].clone(), vertices[i + 1].clone(), vertices[i + 2].clone() }, new Vector3d[] {
+					vertexNormals[0].clone(), vertexNormals[i + 1].clone(), vertexNormals[i + 2].clone() },
+					new int[] { colors[0], colors[i + 1], colors[i + 2] }, mtl));
 		}
 	}
 
@@ -62,16 +64,16 @@ public class Polygon implements Transform3d {
 			int index1 = 1 + i * 2;
 			int index2 = index1 + 1;
 
-			vertices[index1] = (Point3d) t.triangle.points[1].clone();
-			vertices[index2] = (Point3d) t.triangle.points[2].clone();
+			vertices[index1] = t.triangle.points[1].clone();
+			vertices[index2] = t.triangle.points[2].clone();
 
-			vertexNormals[index1] = (Vector3d) t.vertexNormals[1].clone();
-			vertexNormals[index2] = (Vector3d) t.vertexNormals[2].clone();
+			vertexNormals[index1] = t.vertexNormals[1].clone();
+			vertexNormals[index2] = t.vertexNormals[2].clone();
 
 			colors[index1] = t.colors[1];
 			colors[index2] = t.colors[2];
 		}
 
-		return new Polygon(vertices, vertexNormals, colors);
+		return new Polygon(vertices, vertexNormals, colors, modelTriangles.get(0).mtl);
 	}
 }

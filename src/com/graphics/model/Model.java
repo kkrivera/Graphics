@@ -10,26 +10,19 @@ import com.graphics.model.geom.ModelTriangle;
 public class Model implements Transform3d {
 	public Set<ModelTriangle> triangles;
 	public String name;
-	public Material mtl;
 
-	public Model(String name, Set<ModelTriangle> triangles, Material mtl) {
+	public Model(String name, Set<ModelTriangle> triangles) {
 		this.name = name;
 		this.triangles = triangles;
-		this.mtl = mtl;
 	}
 
 	public Model concat(Model m) {
-		try {
-			Model m1 = (Model) this.clone();
-			Model m2 = (Model) m.clone();
+		Model m1 = this.clone();
+		Model m2 = m.clone();
 
-			Set<ModelTriangle> modelSet = new HashSet<ModelTriangle>(m1.triangles);
-			modelSet.addAll(m2.triangles);
-			return new Model(m1.name + " -- " + m2.name, modelSet, m1.mtl);
-
-		} catch (CloneNotSupportedException e) {
-			throw new RuntimeException(e);
-		}
+		Set<ModelTriangle> modelSet = new HashSet<ModelTriangle>(m1.triangles);
+		modelSet.addAll(m2.triangles);
+		return new Model(m1.name + " -- " + m2.name, modelSet);
 	}
 
 	@Override
@@ -53,13 +46,12 @@ public class Model implements Transform3d {
 		return sb.toString();
 	}
 
-	@Override
-	public Object clone() throws CloneNotSupportedException {
+	public Model clone() {
 		Set<ModelTriangle> modelSet = new HashSet<ModelTriangle>();
 		for (ModelTriangle t : triangles) {
-			modelSet.add((ModelTriangle) t.clone());
+			modelSet.add(t.clone());
 		}
 
-		return new Model(new String(name), modelSet, mtl);
+		return new Model(new String(name), modelSet);
 	}
 }

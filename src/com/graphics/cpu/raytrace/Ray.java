@@ -1,5 +1,6 @@
 package com.graphics.cpu.raytrace;
 
+import com.graphics.cpu.raytrace.acceleration.IntersectionBundle;
 import com.graphics.geom.impl.Box;
 import com.graphics.geom.impl.Point3d;
 import com.graphics.geom.impl.Triangle;
@@ -18,13 +19,14 @@ public class Ray {
 		return o.plus(this.d.times(d));
 	}
 
-	public double intersects(ModelTriangle modelTriangle) {
+	public IntersectionBundle intersects(ModelTriangle modelTriangle) {
 
 		double det = modelTriangle.normal.dot(d);
+		double[] vals = { -1, 0, 0 };
 
 		// Parallel
 		if (det == 0.0) {
-			return -1;
+			return null;
 		}
 
 		Triangle triangle = modelTriangle.triangle;
@@ -32,7 +34,7 @@ public class Ray {
 
 		// Triangle behind ray
 		if (t < 0) {
-			return -1;
+			return null;
 		}
 
 		Point3d p = getPoint(t);
@@ -47,10 +49,10 @@ public class Ray {
 		double b = v1cv2.dot(v1.cross(v)) / dotv1cv2; // beta
 
 		if (a > 0 && a <= 1 && b > 0 && b <= 1 && (a + b) <= 1) {
-			return t;
+			return new IntersectionBundle(t, a, b);
 		}
 
-		return -1;
+		return null;
 	}
 
 	public boolean intersects(Box b) {

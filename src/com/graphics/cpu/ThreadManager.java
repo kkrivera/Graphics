@@ -51,7 +51,7 @@ public class ThreadManager {
 
 			return results;
 		} catch (Exception e) {
-			throw new RuntimeException();
+			throw new RuntimeException(e);
 		}
 	}
 

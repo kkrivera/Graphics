@@ -1,15 +1,12 @@
 package com.graphics.model.load;
 
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
-import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,8 +29,8 @@ public class WavefrontModelLoader implements ModelLoader {
 			final File obj = new File(root.getCanonicalPath() + path);
 			final String objDir = obj.getAbsolutePath().replace(obj.getName(), "");
 
-			final Model model = new Model(obj.getName(), new HashSet<ModelTriangle>(), new Material(new double[] { 1, 1, 1 }, new double[] { 1, 1, 1 },
-					new double[] { 1, 1, 1 }, 1, 0));
+			final Model model = new Model(obj.getName(), new HashSet<ModelTriangle>());
+			final Material mtl = new Material(new double[] { 1, 1, 1 }, new double[] { 1, 1, 1 }, new double[] { 1, 1, 1 }, 1, 0);
 			if (obj.exists()) {
 				String objOutput = readFile(obj);
 
@@ -48,7 +45,7 @@ public class WavefrontModelLoader implements ModelLoader {
 							@Override
 							public void run(String matchedResult) {
 								String[] Ka = matchedResult.split(" ");
-								model.mtl.Ka = new Vector3d(Double.parseDouble(Ka[0]), Double.parseDouble(Ka[1]), Double.parseDouble(Ka[2]));
+								mtl.Ka = new Vector3d(Double.parseDouble(Ka[0]), Double.parseDouble(Ka[1]), Double.parseDouble(Ka[2]));
 							}
 						});
 
@@ -57,7 +54,7 @@ public class WavefrontModelLoader implements ModelLoader {
 							@Override
 							public void run(String matchedResult) {
 								String[] Kd = matchedResult.split(" ");
-								model.mtl.Kd = new Vector3d(Double.parseDouble(Kd[0]), Double.parseDouble(Kd[1]), Double.parseDouble(Kd[2]));
+								mtl.Kd = new Vector3d(Double.parseDouble(Kd[0]), Double.parseDouble(Kd[1]), Double.parseDouble(Kd[2]));
 							}
 						});
 
@@ -66,7 +63,7 @@ public class WavefrontModelLoader implements ModelLoader {
 							@Override
 							public void run(String matchedResult) {
 								String[] Ks = matchedResult.split(" ");
-								model.mtl.Ks = new Vector3d(Double.parseDouble(Ks[0]), Double.parseDouble(Ks[1]), Double.parseDouble(Ks[2]));
+								mtl.Ks = new Vector3d(Double.parseDouble(Ks[0]), Double.parseDouble(Ks[1]), Double.parseDouble(Ks[2]));
 							}
 						});
 
@@ -74,7 +71,7 @@ public class WavefrontModelLoader implements ModelLoader {
 						parse("Ns", mtlFileOutput, new Each() {
 							@Override
 							public void run(String matchedResult) {
-								model.mtl.Ns = Double.parseDouble(matchedResult);
+								mtl.Ns = Double.parseDouble(matchedResult);
 							}
 						});
 
@@ -82,7 +79,7 @@ public class WavefrontModelLoader implements ModelLoader {
 						parse("d|Tr", mtlFileOutput, new Each() {
 							@Override
 							public void run(String matchedResult) {
-								model.mtl.Tr = Double.parseDouble(matchedResult);
+								mtl.Tr = Double.parseDouble(matchedResult);
 							}
 						});
 
@@ -90,7 +87,7 @@ public class WavefrontModelLoader implements ModelLoader {
 						parse("map_Ka", mtlFileOutput, new Each() {
 							@Override
 							public void run(String matchedResult) {
-								model.mtl.map_Ka = matchedResult;
+								mtl.map_Ka = matchedResult;
 							}
 						});
 
@@ -98,7 +95,7 @@ public class WavefrontModelLoader implements ModelLoader {
 						parse("map_Kd", mtlFileOutput, new Each() {
 							@Override
 							public void run(String matchedResult) {
-								model.mtl.map_Kd = matchedResult;
+								mtl.map_Kd = matchedResult;
 							}
 						});
 
@@ -106,20 +103,17 @@ public class WavefrontModelLoader implements ModelLoader {
 						parse("map_Ks", mtlFileOutput, new Each() {
 							@Override
 							public void run(String matchedResult) {
-								model.mtl.map_Ks = matchedResult;
+								mtl.map_Ks = matchedResult;
 							}
 						});
 					}
 				});
 
-				final BufferedImage mapKd = ImageIO.read(new File(objDir + model.mtl.map_Kd));
-				WritableRaster raster = mapKd.getRaster();
-				DataBufferByte data = (DataBufferByte) raster.getDataBuffer();
+				final BufferedImage mapKd = mtl.map_Kd.isEmpty() ? null : ImageIO.read(new File(objDir + mtl.map_Kd));
 
 				final List<Point3d> vertices = new ArrayList<Point3d>();
 				final List<Vector2d> textureCoordinates = new ArrayList<Vector2d>();
 				final List<Vector3d> vertexNormals = new ArrayList<Vector3d>();
-				final Set<ModelTriangle> triangles = new HashSet<ModelTriangle>();
 				// TODO vp (parameter space normals)
 
 				// Vertices
@@ -147,6 +141,16 @@ public class WavefrontModelLoader implements ModelLoader {
 						String[] strVertexNormals = matchedResult.split(" ");
 						vertexNormals.add(new Vector3d(Double.parseDouble(strVertexNormals[0]), Double.parseDouble(strVertexNormals[1]), Double
 								.parseDouble(strVertexNormals[2])));
+					}
+				});
+
+				// TODO
+				// Loop through using different materials
+				parse("usemtl", objOutput, new Each() {
+
+					@Override
+					public void run(String matchedResult) {
+
 					}
 				});
 
@@ -189,20 +193,36 @@ public class WavefrontModelLoader implements ModelLoader {
 							}
 						}
 
-						// LOAD
-						// TODO read color from mtl
-						int w = mapKd.getWidth() - 1;
-						int h = mapKd.getHeight() - 1;
-						for (int i = 0; i < polygonSize; i++) {
-							Vector2d textureCoordinate = textureArr[i];
-							try {
-								colors[i] = mapKd.getRGB((int) (w * (textureCoordinate.x)), (int) (h * (1.0 - textureCoordinate.y)));
-							} catch (Exception e) {
-								throw new RuntimeException(e);
+						if (mapKd != null) {
+							int w = mapKd.getWidth() - 1;
+							int h = mapKd.getHeight() - 1;
+							for (int i = 0; i < polygonSize; i++) {
+								Vector2d textureCoordinate = textureArr[i];
+								try {
+									double u = textureCoordinate.x;
+									double v = 1.0 - textureCoordinate.y;
+
+									// Clamp
+									if (u > 1.0) {
+										u %= 1.0;
+									} else if (u < 0.0) {
+										u *= -1.0;
+									}
+
+									if (v > 1.0) {
+										v %= 1.0;
+									} else if (v < 0.0) {
+										v *= -1.0;
+									}
+
+									colors[i] = mapKd.getRGB((int) (w * u), (int) (h * v));
+								} catch (Exception e) {
+									throw new RuntimeException(e);
+								}
 							}
 						}
 
-						Polygon face = new Polygon(vertexArr, normalArr, colors);
+						Polygon face = new Polygon(vertexArr, normalArr, colors, mtl);
 						model.triangles.addAll(face.modelTriangles);
 					}
 				});

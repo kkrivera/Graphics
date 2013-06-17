@@ -5,6 +5,7 @@ import java.util.Set;
 
 import com.graphics.cpu.raytrace.Ray;
 import com.graphics.cpu.raytrace.acceleration.IntersectionAlgorithm;
+import com.graphics.cpu.raytrace.acceleration.IntersectionBundle;
 import com.graphics.cpu.raytrace.properties.PropertyLoader;
 import com.graphics.geom.impl.Point3d;
 import com.graphics.geom.impl.Vector3d;
@@ -17,6 +18,7 @@ public class Lambertian implements LightingAlgorithm {
 
 	static final int MAX_ELEMENT_COLOR = 255;
 	static final int MAX_COLOR = Window.getColor(MAX_ELEMENT_COLOR, MAX_ELEMENT_COLOR, MAX_ELEMENT_COLOR);
+	static final Vector3d WHITE = new Vector3d(MAX_ELEMENT_COLOR, MAX_ELEMENT_COLOR, MAX_ELEMENT_COLOR);
 
 	IntersectionAlgorithm intersectionAlgorithm;
 	Set<ModelTriangle> scene = new HashSet<ModelTriangle>();
@@ -37,40 +39,63 @@ public class Lambertian implements LightingAlgorithm {
 	}
 
 	@Override
-	public int render(Ray ray, double t, ModelTriangle triangle, Material mtl) {
+	public int render(Ray ray, IntersectionBundle intersection, ModelTriangle triangle) {
 
-		Point3d p = ray.getPoint(t);
+		Material mtl = triangle.mtl;
+		Point3d p = ray.getPoint(intersection.t);
 
-		// TODO - barycentric value
-		// int color = (triangle.colors[0] + triangle.colors[1]
-		// +triangle.colors[2]) / 3;
-		int mtlColor = triangle.colors[0];
+		Vector3d mtlColors = new Vector3d(0, 0, 0);
+		for (int i = 0; i < 3; i++) {
+			int color = triangle.colors[i];
 
-		Vector3d mtlColors = new Vector3d(mtlColor >> 16 & 0xFF, mtlColor >> 8 & 0xFF, mtlColor >> 0 & 0xFF);
+			double modifier = intersection.gamma;
+			switch (i) {
+			case 1:
+				modifier = intersection.alpha;
+				break;
+			case 2:
+				modifier = intersection.beta;
+				break;
 
-		Vector3d n = triangle.normal;
-		Vector3d L = p.minus(light).normalize();
+			default:
+				break;
+			}
 
-		double nDotL = n.dot(L);
-		if (nDotL < 0) {
-			nDotL = 0;
+			// Separate RGB into Vector3d
+			mtlColors.x += (color >> 16 & 0xFF) * modifier;
+			mtlColors.y += (color >> 8 & 0xFF) * modifier;
+			mtlColors.z += (color >> 0 & 0xFF) * modifier;
 		}
 
-		Vector3d R = n.times(-2 * nDotL).normalize();
+		Vector3d rgb = new Vector3d(0, 0, 0);
+
+		// LAMBERTIAN
+		Vector3d n = triangle.normal;
+		Vector3d L = p.minus(light);
+
+		double nDotL = n.dot(L.normalize());
+		if (nDotL > 0) {
+			double distFromLight = L.mag();
+			double dropoff = distFromLight > 0 ? 1.0 / (Math.pow(distFromLight, 2)) : 1;
+
+			Vector3d rgbDiffuse = mtl.Kd.times(mtlColors).times(nDotL * dropoff * intensity);
+			rgb.plusEquals(rgbDiffuse);
+		}
+
+		// PHONG
+		Vector3d R = L.minus(n.times(2 * nDotL).normalize()).normalize();
 		Vector3d V = ray.d.times(-1).normalize();
 
 		double rDotV = R.dot(V);
 		if (rDotV < 0) {
-			rDotV = 0;
+			Vector3d rgbSpecular = mtl.Ks.times(Math.pow(rDotV, mtl.Ns)).times(WHITE);
+			rgb.plusEquals(rgbSpecular);
 		}
 
 		Vector3d reflectiveColor = new Vector3d(0, 0, 0);
 
-		Vector3d rgbDiffuse = mtl.Kd.times(mtlColors).times(nDotL);
-		Vector3d rgbSpecular = mtl.Ks.times(Math.pow(rDotV, mtl.Ns)).times(new Vector3d(MAX_ELEMENT_COLOR, MAX_ELEMENT_COLOR, MAX_ELEMENT_COLOR));
-		Vector3d rgbAmbient = mtl.Ka;
-
-		Vector3d rgb = rgbDiffuse.plus(rgbSpecular).plus(rgbAmbient).plus(reflectiveColor);
+		Vector3d rgbAmbient = mtl.Ka.times(WHITE);
+		rgb.plusEquals(rgbAmbient).plusEquals(reflectiveColor);
 
 		// Clamp rgb values
 		for (int i = 0; i < 3; i++) {

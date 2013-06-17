@@ -45,36 +45,36 @@ public class BoxModelGenerator extends BaseModelGenerator {
 
 		// FRONT
 		polygons.add(new Polygon(new Point3d[] { new Point3d(-x, -y, z), new Point3d(x, -y, z), new Point3d(x, y, z), new Point3d(-x, y, z) }, new Vector3d[] {
-				k, k, k, k }, colors));
+				k.clone(), k.clone(), k.clone(), k.clone() }, colors, mtl));
 
 		// BACK
 		polygons.add(new Polygon(new Point3d[] { new Point3d(x, -y, -z), new Point3d(-x, -y, -z), new Point3d(-x, y, -z), new Point3d(x, y, -z) },
-				new Vector3d[] { nk, nk, nk, nk }, colors));
+				new Vector3d[] { nk.clone(), nk.clone(), nk.clone(), nk.clone() }, colors, mtl));
 
 		// TOP
 		polygons.add(new Polygon(new Point3d[] { new Point3d(-x, y, z), new Point3d(x, y, z), new Point3d(x, y, -z), new Point3d(-x, y, -z) }, new Vector3d[] {
-				j, j, j, j }, colors));
+				j.clone(), j.clone(), j.clone(), j.clone() }, colors, mtl));
 
 		// BOTTOM
 		polygons.add(new Polygon(new Point3d[] { new Point3d(x, -y, z), new Point3d(-x, -y, z), new Point3d(-x, -y, -z), new Point3d(x, -y, -z) },
-				new Vector3d[] { nj, nj, nj, nj }, colors));
+				new Vector3d[] { nj.clone(), nj.clone(), nj.clone(), nj.clone() }, colors, mtl));
 
 		// RIGHT
 		polygons.add(new Polygon(new Point3d[] { new Point3d(x, -y, z), new Point3d(x, -y, -z), new Point3d(x, y, -z), new Point3d(x, y, z) }, new Vector3d[] {
-				i, i, i, i }, colors));
+				i.clone(), i.clone(), i.clone(), i.clone() }, colors, mtl));
 
 		// LEFT
 		polygons.add(new Polygon(new Point3d[] { new Point3d(-x, -y, z), new Point3d(-x, y, z), new Point3d(-x, y, -z), new Point3d(-x, -y, -z) },
-				new Vector3d[] { ni, ni, ni, ni }, colors));
+				new Vector3d[] { ni.clone(), ni.clone(), ni.clone(), ni.clone() }, colors, mtl));
 
 		for (Polygon polygon : polygons) {
-			// Translate the box, quad-by-quad, from the origin to its intended center
+			// Translate the box from the origin to its intended center
 			polygon.translate(center.x, center.y, center.z);
 
 			modelTriangles.addAll(polygon.modelTriangles);
 		}
 
-		return new Model("Generated Box Model", modelTriangles, mtl);
+		return new Model("Generated Box Model", modelTriangles);
 	}
 
 }

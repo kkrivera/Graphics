@@ -63,8 +63,7 @@ public class Point3d implements Geometry, Transform3d {
 		return sb.toString();
 	}
 
-	@Override
-	public Object clone() throws CloneNotSupportedException {
+	public Point3d clone() {
 		return new Point3d(x, y, z);
 	}
 
