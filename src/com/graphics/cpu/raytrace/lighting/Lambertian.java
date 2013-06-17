@@ -15,7 +15,8 @@ import com.graphics.window.Window;
 
 public class Lambertian implements LightingAlgorithm {
 
-	static final int MAX_COLOR = Window.getColor(255, 255, 255);
+	static final int MAX_ELEMENT_COLOR = 255;
+	static final int MAX_COLOR = Window.getColor(MAX_ELEMENT_COLOR, MAX_ELEMENT_COLOR, MAX_ELEMENT_COLOR);
 
 	IntersectionAlgorithm intersectionAlgorithm;
 	Set<ModelTriangle> scene = new HashSet<ModelTriangle>();
@@ -40,11 +41,11 @@ public class Lambertian implements LightingAlgorithm {
 
 		Point3d p = ray.getPoint(t);
 
+		// TODO - barycentric value
 		// int color = (triangle.colors[0] + triangle.colors[1]
 		// +triangle.colors[2]) / 3;
 		int mtlColor = triangle.colors[0];
 
-		// TODO - barycentric value
 		Vector3d mtlColors = new Vector3d(mtlColor >> 16 & 0xFF, mtlColor >> 8 & 0xFF, mtlColor >> 0 & 0xFF);
 
 		Vector3d n = triangle.normal;
@@ -55,8 +56,8 @@ public class Lambertian implements LightingAlgorithm {
 			nDotL = 0;
 		}
 
-		Vector3d R = n.times(-2 * nDotL);
-		Vector3d V = L.times(-1);
+		Vector3d R = n.times(-2 * nDotL).normalize();
+		Vector3d V = ray.d.times(-1).normalize();
 
 		double rDotV = R.dot(V);
 		if (rDotV < 0) {
@@ -66,22 +67,21 @@ public class Lambertian implements LightingAlgorithm {
 		Vector3d reflectiveColor = new Vector3d(0, 0, 0);
 
 		Vector3d rgbDiffuse = mtl.Kd.times(mtlColors).times(nDotL);
-		Vector3d rgbSpecular = mtl.Ks.times(mtl.Ns).times(rDotV);
+		Vector3d rgbSpecular = mtl.Ks.times(Math.pow(rDotV, mtl.Ns)).times(new Vector3d(MAX_ELEMENT_COLOR, MAX_ELEMENT_COLOR, MAX_ELEMENT_COLOR));
 		Vector3d rgbAmbient = mtl.Ka;
 
-		Vector3d rgb = rgbDiffuse;// .plus(rgbSpecular).plus(rgbAmbient);
+		Vector3d rgb = rgbDiffuse.plus(rgbSpecular).plus(rgbAmbient).plus(reflectiveColor);
 
 		// Clamp rgb values
 		for (int i = 0; i < 3; i++) {
 			double color = rgb.get(i);
 			if (color < 0) {
 				rgb.set(i, 0);
-			} else if (color > MAX_COLOR) {
-				rgb.set(i, MAX_COLOR);
+			} else if (color > MAX_ELEMENT_COLOR) {
+				rgb.set(i, MAX_ELEMENT_COLOR);
 			}
 		}
 
 		return Window.getColor((int) rgb.x, (int) rgb.y, (int) rgb.z);
 	}
-
 }

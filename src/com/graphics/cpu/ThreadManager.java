@@ -13,7 +13,8 @@ import java.util.concurrent.TimeUnit;
 
 public class ThreadManager {
 	static int maxThreads = Runtime.getRuntime().availableProcessors();
-	static ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(1, maxThreads, 1000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+	static ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(maxThreads, maxThreads, 1000, TimeUnit.MILLISECONDS,
+			new LinkedBlockingQueue<Runnable>());
 
 	public void execute(Runnable... commands) {
 		for (Runnable command : commands) {
@@ -26,19 +27,21 @@ public class ThreadManager {
 			Set<R> results = new HashSet<R>();
 
 			Set<Future<R>> futures = new HashSet<Future<R>>();
-			for (Future<R> future : threadPoolExecutor.invokeAll(callables)) {
-				futures.add(future);
+
+			for (Callable<R> callable : callables) {
+				futures.add(threadPoolExecutor.submit(callable));
 			}
 
-			boolean wait = true;
-			while (wait) {
+			boolean done = false;
+			while (!done) {
 
+				done = true;
 				for (Future<R> future : futures) {
-					wait |= !future.isDone();
+					done &= future.isDone();
 				}
 
-				if (wait) {
-					this.wait(100);
+				if (!done) {
+					Thread.sleep(100);
 				}
 			}
 
@@ -67,6 +70,30 @@ public class ThreadManager {
 
 		return executeForResult(callables);
 
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public <T, R> void executeForResult(Collection<T> input, final ThreadedAction<T, R> action, R resultSet) {
+		Set<Callable<R>> callables = new HashSet<Callable<R>>();
+
+		for (final Collection<T> splitInput : splitInputs(input)) {
+			callables.add(new Callable<R>() {
+				@Override
+				public R call() throws Exception {
+					return action.execute(splitInput);
+				}
+			});
+		}
+
+		Set<R> results = executeForResult(callables);
+		for (R result : results) {
+
+			if (result instanceof Map) {
+				((Map) resultSet).putAll((Map) result);
+			} else {
+				((Collection) resultSet).addAll((Collection) result);
+			}
+		}
 	}
 
 	@SuppressWarnings("unchecked")

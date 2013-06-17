@@ -36,8 +36,8 @@ public class RayTracer {
 		 */
 		List<Model> loadedModels = new ArrayList<Model>();
 
-		BoxModelGenerator boxModel = new BoxModelGenerator(new Point3d(0, 0, 0), 2, 2, 2);
-		boxModel.configure(Window.getColor(125, 255, 255), new Material(new double[] { 1, 1, 1 }, new double[] { 1, 1, 1 }, new double[] { 1, 1, 1 }, 1, 0));
+		BoxModelGenerator boxModel = new BoxModelGenerator(new Point3d(0, 0, 2), .5, .5, .5);
+		boxModel.configure(Window.getColor(125, 255, 255), new Material(new double[] { 1, 1, 1 }, new double[] { 1, 1, 1 }, new double[] { .1, .1, .1 }, 1, 0));
 		// loadedModels.add(boxModel.generate());
 
 		// Begin Model load in separate thread
@@ -58,9 +58,8 @@ public class RayTracer {
 		}
 
 		/*
-		 * Generate rays
+		 * Init variables
 		 */
-
 		int windowWidth = Integer.parseInt(properties.getProperty("window.width"));
 		int windowHeight = Integer.parseInt(properties.getProperty("window.height"));
 		double n = Integer.parseInt(properties.getProperty("camera.n"));
@@ -109,7 +108,7 @@ public class RayTracer {
 	private static Map<Ray, Set<Point2d>> buildRayMap(double resolution, final int windowWidth, final int windowHeight, final Vector3d eye, final Vector3d u00,
 			final Vector3d u00Vertical, final Vector3d u00Horizontal) {
 
-		ThreadManager tm = new ThreadManager();
+		ThreadManager threadManager = new ThreadManager();
 
 		Set<Integer> indices = new HashSet<Integer>();
 		final int resolutionStep = (int) (1.0 / resolution);
@@ -118,7 +117,9 @@ public class RayTracer {
 				indices.add(i * windowHeight + j);
 			}
 		}
-		Set<Map<Ray, Set<Point2d>>> results = tm.executeForResult(indices, new ThreadedAction<Integer, Map<Ray, Set<Point2d>>>() {
+
+		Map<Ray, Set<Point2d>> pixelRayMap = new HashMap<Ray, Set<Point2d>>();
+		threadManager.executeForResult(indices, new ThreadedAction<Integer, Map<Ray, Set<Point2d>>>() {
 			@Override
 			public Map<Ray, Set<Point2d>> execute(Collection<Integer> input) {
 				Map<Ray, Set<Point2d>> pixelRayMap = new HashMap<Ray, Set<Point2d>>();
@@ -140,39 +141,20 @@ public class RayTracer {
 
 				return pixelRayMap;
 			}
-		});
-
-		Map<Ray, Set<Point2d>> pixelRayMap = new HashMap<Ray, Set<Point2d>>();
-		for (Map<Ray, Set<Point2d>> subResultSet : results) {
-			pixelRayMap.putAll(subResultSet);
-		}
-
-		// for (int i = 0; i < windowWidth; i += resolutionStep) {
-		// for (int j = 0; j < windowHeight; j += resolutionStep) {
-		//
-		// Set<Point2d> pixels = new HashSet<Point2d>();
-		// for (int xRes = 0; xRes < resolutionStep; xRes++) {
-		// for (int yRes = 0; yRes < resolutionStep; yRes++) {
-		// pixels.add(new Point2d(windowWidth - 1 - (i + xRes), windowHeight - 1 - (j + yRes)));
-		// }
-		// }
-		//
-		// pixelRayMap.put(new Ray(eye, u00.plus(u00Vertical.times(j)).plus(u00Horizontal.times(i)).normalize()), pixels);
-		// }
-		// }
+		}, pixelRayMap);
 
 		return pixelRayMap;
 	}
 
-	public static void render(Map<Ray, Set<Point2d>> pixelRayMap, List<Model> models) {
+	public static void render(final Map<Ray, Set<Point2d>> pixelRayMap, List<Model> models) {
 		PropertyLoader propertyLoader = new PropertyLoader();
-		Window window = new Window();
+		final Window window = new Window();
 
 		/*
 		 * Load Intersection and Lighting Algorithm
 		 */
 		IntersectionAlgorithm intersection;
-		LightingAlgorithm lighting;
+		final LightingAlgorithm lighting;
 		try {
 			intersection = IntersectionAlgorithm.class.cast(Class.forName(propertyLoader.getProperty("acceleration.algorithm.class")).newInstance());
 			lighting = LightingAlgorithm.class.cast(Class.forName(propertyLoader.getProperty("lighting.algorithm.class")).newInstance());
@@ -180,38 +162,47 @@ public class RayTracer {
 			throw new RuntimeException(e);
 		}
 
-		//
 		lighting.init(pixelRayMap.keySet(), models.toArray(new Model[] {}));
 
-		for (Model model : models) {
+		ThreadManager threadManager = new ThreadManager();
 
-			Map<Ray, Map<ModelTriangle, Double>> intersectedRays = intersection.intersect(model, pixelRayMap.keySet());
-			for (Ray ray : intersectedRays.keySet()) {
+		for (final Model model : models) {
 
-				/*
-				 * Get closest triangle
-				 */
-				double t = Double.MAX_VALUE;
-				ModelTriangle triangle = null;
-				for (Entry<ModelTriangle, Double> entry : intersectedRays.get(ray).entrySet()) {
+			final Map<Ray, Map<ModelTriangle, Double>> intersectedRays = intersection.intersect(model, pixelRayMap.keySet());
 
-					if (triangle == null || entry.getValue() < t) {
-						t = entry.getValue();
-						triangle = entry.getKey();
+			threadManager.executeForResult(new HashSet<Ray>(intersectedRays.keySet()), new ThreadManager.ThreadedAction<Ray, Integer>() {
+				@Override
+				public Integer execute(Collection<Ray> input) {
+
+					for (Ray ray : input) {
+
+						/*
+						 * Get closest triangle
+						 */
+						double t = Double.MAX_VALUE;
+						ModelTriangle triangle = null;
+						for (Entry<ModelTriangle, Double> entry : intersectedRays.get(ray).entrySet()) {
+
+							if (triangle == null || entry.getValue() < t) {
+								t = entry.getValue();
+								triangle = entry.getKey();
+							}
+						}
+
+						/*
+						 * Render Triangle point
+						 */
+						if (triangle != null) {
+							int pixelColor = lighting.render(ray, t, triangle, model.mtl);
+							for (Point2d pixel : pixelRayMap.get(ray)) {
+								window.setColor((int) pixel.x, (int) pixel.y, pixelColor);
+							}
+						}
 					}
-
+					return null;
 				}
+			});
 
-				/*
-				 * Render Triangle point
-				 */
-				if (triangle != null) {
-					int pixelColor = lighting.render(ray, t, triangle, model.mtl);
-					for (Point2d pixel : pixelRayMap.get(ray)) {
-						window.setColor((int) pixel.x, (int) pixel.y, pixelColor);
-					}
-				}
-			}
 		}
 		window.update(null);
 	}
