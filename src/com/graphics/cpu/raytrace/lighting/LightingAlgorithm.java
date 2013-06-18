@@ -20,4 +20,5 @@ public interface LightingAlgorithm {
 	 * @return rendered pixel color
 	 */
 	public int render(Ray ray, IntersectionBundle intersection, ModelTriangle triangle);
+
 }

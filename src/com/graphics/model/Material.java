@@ -13,6 +13,7 @@ public class Material {
 	public String map_Ks = "";
 	public String map_Ns = "";
 	public String map_bump = "";
+	public double Rr = 0.0;
 
 	public Material(double[] Ka, double[] Kd, double[] Ks, double Ns, double Tr) {
 		this.Ka = new Vector3d(Ka);

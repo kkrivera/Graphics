@@ -38,9 +38,10 @@ public class RayTracer {
 		 */
 		List<Model> loadedModels = new ArrayList<Model>();
 
-		BoxModelGenerator boxModel = new BoxModelGenerator(new Point3d(1, .5, 2), 1, 1, 1);
-		boxModel.configure(Window.getColor(125, 255, 255), new Material(new double[] { .01, .01, .01 }, new double[] { 1, 1, 1 }, new double[] { .1, .1, .1 },
-				1, 0));
+		BoxModelGenerator boxModel = new BoxModelGenerator(new Point3d(.5, -1.5, 1.2), 1, 1, 1);
+		Material mtl = new Material(new double[] { .01, .01, .01 }, new double[] { 1, 1, 1 }, new double[] { .1, .1, .1 }, 1, 1);
+		mtl.Rr = .5;
+		boxModel.configure(Window.getColor(50, 50, 50), mtl);
 		loadedModels.add(boxModel.generate());
 
 		// Begin Model load in separate thread
@@ -182,21 +183,9 @@ public class RayTracer {
 				for (Ray ray : input) {
 
 					/*
-					 * Get closest triangle
-					 */
-					double t = Double.MAX_VALUE;
-					ModelTriangle triangle = null;
-					for (Entry<ModelTriangle, IntersectionBundle> entry : intersectedRays.get(ray).entrySet()) {
-
-						if (triangle == null || entry.getValue().t < t) {
-							t = entry.getValue().t;
-							triangle = entry.getKey();
-						}
-					}
-
-					/*
 					 * Render Triangle point
 					 */
+					ModelTriangle triangle = closestTriangle(intersectedRays.get(ray));
 					if (triangle != null) {
 						IntersectionBundle intersection = intersectedRays.get(ray).get(triangle);
 						int pixelColor = lighting.render(ray, intersection, triangle);
@@ -211,5 +200,19 @@ public class RayTracer {
 		});
 
 		window.update(null);
+	}
+
+	public static ModelTriangle closestTriangle(Map<ModelTriangle, IntersectionBundle> intersections) {
+		double t = Double.MAX_VALUE;
+		ModelTriangle triangle = null;
+		for (Entry<ModelTriangle, IntersectionBundle> entry : intersections.entrySet()) {
+
+			if (triangle == null || entry.getValue().t < t) {
+				t = entry.getValue().t;
+				triangle = entry.getKey();
+			}
+		}
+
+		return triangle;
 	}
 }

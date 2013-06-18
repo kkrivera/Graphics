@@ -3,20 +3,20 @@ package com.graphics.cpu;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 public class ThreadManager {
 	static int maxThreads = Runtime.getRuntime().availableProcessors();
-	static ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(maxThreads, maxThreads, 1000, TimeUnit.MILLISECONDS,
-			new LinkedBlockingQueue<Runnable>());
+	static ExecutorService threadPoolExecutor = Executors.newCachedThreadPool();
 
 	public void execute(Runnable... commands) {
+
 		for (Runnable command : commands) {
 			threadPoolExecutor.execute(command);
 		}
@@ -26,11 +26,7 @@ public class ThreadManager {
 		try {
 			Set<R> results = new HashSet<R>();
 
-			Set<Future<R>> futures = new HashSet<Future<R>>();
-
-			for (Callable<R> callable : callables) {
-				futures.add(threadPoolExecutor.submit(callable));
-			}
+			List<Future<R>> futures = threadPoolExecutor.invokeAll(callables);
 
 			boolean done = false;
 			while (!done) {

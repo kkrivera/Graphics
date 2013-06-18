@@ -5,6 +5,10 @@ public class Vector3d extends Point3d {
 		super(x, y, z);
 	}
 
+	public Vector3d(int[] xyz) {
+		this(xyz[0], xyz[1], xyz[2]);
+	}
+
 	public Vector3d(double[] xyz) {
 		this(xyz[0], xyz[1], xyz[2]);
 	}

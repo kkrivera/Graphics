@@ -72,4 +72,8 @@ public class Window {
 	public static int getColor(int r, int g, int b) {
 		return (int) (r * Math.pow(256, 2) + g * 256 + b);
 	}
+
+	public static int[] splitColor(int color) {
+		return new int[] { color >> 16 & 0xFF, color >> 8 & 0xFF, color >> 0 & 0xFF };
+	}
 }

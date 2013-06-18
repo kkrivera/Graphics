@@ -8,9 +8,10 @@ import com.graphics.geom.impl.Vector3d;
 import com.graphics.model.geom.ModelTriangle;
 
 public class Ray {
-	public Vector3d o, d;
+	public Point3d o;
+	public Vector3d d;
 
-	public Ray(Vector3d o, Vector3d d) {
+	public Ray(Point3d o, Vector3d d) {
 		this.o = o;
 		this.d = d;
 	}

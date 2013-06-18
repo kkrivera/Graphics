@@ -14,16 +14,17 @@ public class CoordinateAxisModelGenerator extends BaseModelGenerator {
 	public CoordinateAxisModelGenerator(double cameraDistance) {
 		double center = cameraDistance / 20.0;
 		double thickness = center / 25.0;
+		double length = center * 4;
 
 		Material mtl = new Material(new double[] { .01, .01, .01 }, new double[] { 1, 1, 1 }, new double[] { .2, .2, .2 }, 1, 0);
 
-		xAxisModelGenerator = new BoxModelGenerator(new Point3d(center, 0, 0), thickness, center * 2, thickness);
+		xAxisModelGenerator = new BoxModelGenerator(new Point3d(center, 0, 0), thickness, length, thickness);
 		xAxisModelGenerator.configure(Window.getColor(255, 0, 0), mtl);
 
-		yAxisModelGenerator = new BoxModelGenerator(new Point3d(0, center, 0), thickness, thickness, center * 2);
+		yAxisModelGenerator = new BoxModelGenerator(new Point3d(0, center, 0), thickness, thickness, length);
 		yAxisModelGenerator.configure(Window.getColor(0, 255, 0), mtl);
 
-		zAxisModelGenerator = new BoxModelGenerator(new Point3d(0, 0, center), center * 2, thickness, thickness);
+		zAxisModelGenerator = new BoxModelGenerator(new Point3d(0, 0, center), length, thickness, thickness);
 		zAxisModelGenerator.configure(Window.getColor(0, 0, 255), mtl);
 	}
 

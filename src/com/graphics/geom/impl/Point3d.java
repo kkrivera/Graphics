@@ -29,6 +29,10 @@ public class Point3d implements Geometry, Transform3d {
 		return new Point3d(this.x + x, this.y + y, this.z + z);
 	}
 
+	public Vector3d plus(Point3d p) {
+		return new Vector3d(this.x + p.x, this.y + p.y, this.z + p.z);
+	}
+
 	@Override
 	public void translate(double x, double y, double z) {
 		this.x += x;
