@@ -5,7 +5,10 @@ import com.graphics.geom.Transform3d;
 public class Box implements Transform3d {
 	// {0-3} +Z points, {4-7} -Z points
 	public Point3d[] points = new Point3d[8];
+
+	// {MIN,MAX}
 	Point3d[] range = null;
+	Point3d center = null;
 
 	public Box(Point3d[] points) {
 		this.points = points;
@@ -26,6 +29,8 @@ public class Box implements Transform3d {
 		points[5] = c2.plus(c2Dir.x, 0, 0);
 		points[6] = c2.plus(c2Dir.x, c2Dir.y, 0);
 		points[7] = c2.plus(0, c2Dir.y, 0);
+
+		center = new Point3d((c1.x + c2.x) / 2.0, (c1.y + c2.y) / 2.0, (c1.z + c2.z) / 2.0);
 	}
 
 	public Point3d[] getRange() {
@@ -45,6 +50,15 @@ public class Box implements Transform3d {
 
 		this.range = range;
 		return this.range;
+	}
+
+	public Point3d getCenter() {
+		getRange();
+
+		if (this.center != null) {
+			this.center = this.range[0].plus(this.range[1]).over(2.0);
+		}
+		return this.center;
 	}
 
 	@Override

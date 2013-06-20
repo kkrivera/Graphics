@@ -22,7 +22,7 @@ import com.graphics.model.Material;
 import com.graphics.model.Model;
 import com.graphics.model.Scene;
 import com.graphics.model.gen.BoxModelGenerator;
-import com.graphics.model.gen.CoordinateAxisModelGenerator;
+import com.graphics.model.gen.RoomModelGenerator;
 import com.graphics.model.geom.ModelTriangle;
 import com.graphics.model.load.ModelLoader;
 import com.graphics.window.Window;
@@ -38,11 +38,19 @@ public class RayTracer {
 		 */
 		List<Model> loadedModels = new ArrayList<Model>();
 
+		/*
+		 * Box Model
+		 */
 		BoxModelGenerator boxModel = new BoxModelGenerator(new Point3d(.5, -1.5, 1.2), 1, 1, 1);
 		Material mtl = new Material(new double[] { .01, .01, .01 }, new double[] { 1, 1, 1 }, new double[] { .1, .1, .1 }, 1, 1);
 		mtl.Rr = .5;
 		boxModel.configure(Window.getColor(50, 50, 50), mtl);
 		loadedModels.add(boxModel.generate());
+
+		/*
+		 * Room Model
+		 */
+		loadedModels.add(new RoomModelGenerator(new Point3d(0, 0, 0), 20).generate());
 
 		// Begin Model load in separate thread
 		try {
@@ -91,7 +99,7 @@ public class RayTracer {
 				.plus(u00Horizontal.over(2));
 
 		// Add coordinate system
-		loadedModels.add(new CoordinateAxisModelGenerator(eye.mag()).generate());
+		// loadedModels.add(new CoordinateAxisModelGenerator(eye.mag()).generate());
 
 		Window window = new Window();
 

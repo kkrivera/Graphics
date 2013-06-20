@@ -17,25 +17,10 @@ public class AABB implements IntersectionAlgorithm {
 
 	@Override
 	public Map<Ray, Map<ModelTriangle, IntersectionBundle>> intersect(final Model model, Set<Ray> rays) {
-		double[] min = new double[] { Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE };
-		double[] max = new double[] { Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE };
-
-		for (ModelTriangle mT : model.triangles) {
-			for (Point3d p : mT.triangle.points) {
-				for (int i = 0; i < 3; i++) {
-					double val = p.get(i);
-					if (val < min[i]) {
-						min[i] = val;
-					} else if (val > max[i]) {
-						max[i] = val;
-					}
-				}
-			}
-		}
 
 		ThreadManager threadManager = new ThreadManager();
 
-		final Box aabb = new Box(new Point3d(max), new Point3d(min));
+		final Box aabb = getAABB(model.triangles);
 		Map<Ray, Map<ModelTriangle, IntersectionBundle>> triangles = new HashMap<Ray, Map<ModelTriangle, IntersectionBundle>>();
 		threadManager.executeForResult(new HashSet<Ray>(rays), new ThreadManager.ThreadedAction<Ray, Map<Ray, Map<ModelTriangle, IntersectionBundle>>>() {
 			@Override
@@ -63,5 +48,25 @@ public class AABB implements IntersectionAlgorithm {
 		}, triangles);
 
 		return triangles;
+	}
+
+	public static Box getAABB(Set<ModelTriangle> triangles) {
+		double[] min = new double[] { Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE };
+		double[] max = new double[] { Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE };
+
+		for (ModelTriangle mT : triangles) {
+			for (Point3d p : mT.triangle.points) {
+				for (int i = 0; i < 3; i++) {
+					double val = p.get(i);
+					if (val < min[i]) {
+						min[i] = val;
+					} else if (val > max[i]) {
+						max[i] = val;
+					}
+				}
+			}
+		}
+
+		return new Box(new Point3d(max), new Point3d(min));
 	}
 }

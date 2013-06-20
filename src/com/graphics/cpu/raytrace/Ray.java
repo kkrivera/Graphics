@@ -21,9 +21,7 @@ public class Ray {
 	}
 
 	public IntersectionBundle intersects(ModelTriangle modelTriangle) {
-
 		double det = modelTriangle.normal.dot(d);
-		double[] vals = { -1, 0, 0 };
 
 		// Parallel
 		if (det == 0.0) {

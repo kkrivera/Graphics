@@ -52,7 +52,16 @@ public class Lambertian implements LightingAlgorithm {
 
 	private int render(Ray ray, IntersectionBundle intersection, ModelTriangle triangle, int reflectiveBounces) {
 		Material mtl = triangle.mtl;
-		Point3d p = ray.getPoint(intersection.t);
+
+		Vector3d n = triangle.normal;
+		Point3d p = ray.getPoint(intersection.t).plus(n.times(-.01));
+		Vector3d L = p.minus(light);
+
+		// Provide a shadow modification
+		double shadowMod = 1;
+		if (underShadow(new Ray(p, light.minus(p)))) {
+			shadowMod = .1;
+		}
 
 		Vector3d mtlColors = new Vector3d(0, 0, 0);
 		for (int i = 0; i < 3; i++) {
@@ -80,15 +89,12 @@ public class Lambertian implements LightingAlgorithm {
 		Vector3d rgb = new Vector3d(0, 0, 0);
 
 		// LAMBERTIAN
-		Vector3d n = triangle.normal;
-		Vector3d L = p.minus(light);
-
 		double nDotL = n.dot(L.normalize());
 		if (nDotL > 0) {
 			double distFromLight = L.mag();
 			double dropoff = distFromLight > 0 ? 1.0 / (Math.pow(distFromLight, 2)) : 1;
 
-			Vector3d rgbDiffuse = mtl.Kd.times(mtlColors).times(nDotL * dropoff * intensity);
+			Vector3d rgbDiffuse = mtl.Kd.times(mtlColors).times(nDotL * dropoff * intensity * shadowMod);
 			rgb.plusEquals(rgbDiffuse);
 		}
 
@@ -98,15 +104,15 @@ public class Lambertian implements LightingAlgorithm {
 		Vector3d V = ray.d.times(-1).normalize();
 
 		double rDotV = R.dot(V);
-		if (rDotV < 0) {
-			Vector3d rgbSpecular = mtl.Ks.times(Math.pow(rDotV, mtl.Ns)).times(WHITE);
+		if (rDotV > 0) {
+			Vector3d rgbSpecular = mtl.Ks.times(Math.pow(rDotV, mtl.Ns)).times(WHITE).times(shadowMod);
 			rgb.plusEquals(rgbSpecular);
 		}
 
-		Vector3d reflectiveColor = reflect(new Ray(p.plus(n.times(-.01)), R), reflectiveBounces).times(mtl.Rr);
+		Vector3d reflectiveColor = reflect(new Ray(p, R), reflectiveBounces).times(mtl.Rr * shadowMod);
 		rgb.plusEquals(reflectiveColor);
 
-		Vector3d rgbAmbient = mtl.Ka.times(WHITE);
+		Vector3d rgbAmbient = mtl.Ka.times(WHITE).times(shadowMod);
 		rgb.plusEquals(rgbAmbient);
 
 		// Clamp rgb values
@@ -140,5 +146,21 @@ public class Lambertian implements LightingAlgorithm {
 		int reflectiveColor = render(reflection, results.get(triangle), triangle, reflectiveBounces + 1);
 
 		return new Vector3d(Window.splitColor(reflectiveColor));
+	}
+
+	private boolean underShadow(Ray lightRay) {
+		Map<Ray, Map<ModelTriangle, IntersectionBundle>> intersections = intersectionAlgorithm.intersect(scene, Collections.singleton(lightRay));
+
+		if (intersections.isEmpty()) {
+			return false;
+		}
+
+		for (IntersectionBundle intersectionBundle : intersections.get(lightRay).values()) {
+			if (intersectionBundle.t > 0.01 && intersectionBundle.t < 1) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
