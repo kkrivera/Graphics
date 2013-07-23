@@ -109,8 +109,6 @@ public class WavefrontModelLoader implements ModelLoader {
 					}
 				});
 
-				final BufferedImage mapKd = mtl.map_Kd.isEmpty() ? null : ImageIO.read(new File(objDir + mtl.map_Kd));
-
 				final List<Point3d> vertices = new ArrayList<Point3d>();
 				final List<Vector2d> textureCoordinates = new ArrayList<Vector2d>();
 				final List<Vector3d> vertexNormals = new ArrayList<Vector3d>();
@@ -153,6 +151,8 @@ public class WavefrontModelLoader implements ModelLoader {
 
 					}
 				});
+
+				final BufferedImage mapKd = mtl.map_Kd.isEmpty() ? null : ImageIO.read(new File(objDir + mtl.map_Kd));
 
 				// Faces
 				parse("f", objOutput, new Each() {
@@ -206,13 +206,13 @@ public class WavefrontModelLoader implements ModelLoader {
 									if (u > 1.0) {
 										u %= 1.0;
 									} else if (u < 0.0) {
-										u *= -1.0;
+										u += 1.0;
 									}
 
 									if (v > 1.0) {
 										v %= 1.0;
 									} else if (v < 0.0) {
-										v *= -1.0;
+										v += 1.0;
 									}
 
 									colors[i] = mapKd.getRGB((int) (w * u), (int) (h * v));

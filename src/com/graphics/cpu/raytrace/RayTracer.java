@@ -23,6 +23,7 @@ import com.graphics.model.Model;
 import com.graphics.model.Scene;
 import com.graphics.model.gen.BoxModelGenerator;
 import com.graphics.model.gen.RoomModelGenerator;
+import com.graphics.model.gen.SphereModelGenerator;
 import com.graphics.model.geom.ModelTriangle;
 import com.graphics.model.load.ModelLoader;
 import com.graphics.window.Window;
@@ -46,6 +47,10 @@ public class RayTracer {
 		mtl.Rr = .5;
 		boxModel.configure(Window.getColor(50, 50, 50), mtl);
 		loadedModels.add(boxModel.generate());
+
+		SphereModelGenerator sphereModel = new SphereModelGenerator(new Point3d(2.5, -1, 0), 1, 1.0 / 100.0);
+		sphereModel.configure(Window.getColor(20, 20, 20), mtl);
+		// loadedModels.add(sphereModel.generate());
 
 		/*
 		 * Room Model

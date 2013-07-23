@@ -58,10 +58,7 @@ public class Lambertian implements LightingAlgorithm {
 		Vector3d L = p.minus(light);
 
 		// Provide a shadow modification
-		double shadowMod = 1;
-		if (underShadow(new Ray(p, light.minus(p)))) {
-			shadowMod = .1;
-		}
+		double shadowMod = underShadow(new Ray(p, light.minus(p))) ? .1 : 1;
 
 		Vector3d mtlColors = new Vector3d(0, 0, 0);
 		for (int i = 0; i < 3; i++) {

@@ -63,7 +63,12 @@ public class BVH implements IntersectionAlgorithm {
 		} else if (rangeDiff.z > rangeDiff.x && rangeDiff.z > rangeDiff.y) {
 			axis = AXIS.Z;
 		}
-		double val = root.box.getCenter().get(axis.ordinal());
+
+		double val = 0;
+		for (ModelTriangle modelTriangle : root.triangles) {
+			val += AABB.getAABB(Collections.singleton(modelTriangle)).getCenter().get(axis.ordinal());
+		}
+		val /= root.triangles.size();
 
 		/*
 		 * Add triangles to triangle set
@@ -73,8 +78,8 @@ public class BVH implements IntersectionAlgorithm {
 		Set<ModelTriangle> right = new HashSet<ModelTriangle>();
 
 		for (ModelTriangle modelTriangle : root.triangles) {
-			double pVal = AABB.getAABB(Collections.singleton(modelTriangle)).getCenter().get(axis.ordinal());
-			if (pVal <= val) {
+			double pVal = modelTriangle.triangle.points[0].get(axis.ordinal());
+			if (pVal < val) {
 				left.add(modelTriangle);
 			} else {
 				right.add(modelTriangle);
@@ -90,25 +95,7 @@ public class BVH implements IntersectionAlgorithm {
 		if (branch.size() <= 1 || root.triangles.size() == branch.size()) {
 			return;
 		}
-
-		// if (root.triangles.size() != branch.size()) {
 		root.children.add(buildBVH(new Voxel(branch)));
-		// } else {
-		// Set<ModelTriangle> subLeft = new HashSet<ModelTriangle>();
-		// Set<ModelTriangle> subRight = new HashSet<ModelTriangle>();
-		// int i = 0;
-		// for (ModelTriangle mT : branch) {
-		// if (i % 2 == 0) {
-		// subLeft.add(mT);
-		// } else {
-		// subRight.add(mT);
-		// }
-		// i++;
-		// }
-		//
-		// branch(root, subLeft);
-		// branch(root, subRight);
-		// }
 	}
 
 	private void intersect(Voxel root, Ray ray, Map<ModelTriangle, IntersectionBundle> results) {
@@ -137,11 +124,11 @@ public class BVH implements IntersectionAlgorithm {
 
 	private class Voxel {
 		public Box box;
-		public Set<ModelTriangle> triangles = new HashSet<ModelTriangle>();
+		public Set<ModelTriangle> triangles = null;
 		public Set<Voxel> children = new HashSet<Voxel>();
 
 		public Voxel(Set<ModelTriangle> t) {
-			this.triangles = t;
+			this.triangles = new HashSet<ModelTriangle>(t);
 			this.box = AABB.getAABB(t);
 		}
 	}
